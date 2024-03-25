@@ -1,0 +1,119 @@
+const express = require('express');
+const mysql = require('mysql');
+const app = express();
+const bodyParser = require('body-parser');
+
+// Database connection configurations
+const db1Pool = mysql.createPool({
+    connectionLimit: 10,
+    host: '10.35.10.78',
+    user: 'root',
+    password: '78mes@haier',
+    database: 'quality_control'
+});
+
+const db2Pool = mysql.createPool({
+    connectionLimit: 10,
+    host: '10.35.10.77',
+    user: 'mes_it',
+    password: 'Haier@2022',
+    database: 'cosmo_im_9771'
+});
+
+app.use(bodyParser.json());
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    next();
+  });
+  
+  
+// Set up API endpoints
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+    next();
+});
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    next();
+  });
+  
+
+// Define API endpoints
+app.get("/oilcharger", async (req, res) => {
+  const { startDate, endDate } = req.query;
+//   console.log(req.query);
+
+  const query1 = `SELECT model, barcode, datetime, program, r600_setpoint, r600_actum, status, alarm FROM oilcharger WHERE datetime BETWEEN '${startDate}' AND '${endDate}'`;
+//   console.log(query1);
+  const query2 = "SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation";
+
+  try {
+    const [result1, result2] = await Promise.all([
+      executeQuery(db1Pool, query1),
+      executeQuery(db2Pool, query2),
+    ]);
+
+    const joinedData = joinData_charge(result1, result2);
+    res.json(joinedData);
+  } catch (error) {
+    res.status(500).send(`Error: ${error.message}`);
+  }
+});
+
+function executeQuery(pool, query) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      connection.query(query, (err, result) => {
+        connection.release();
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
+    });
+  });
+}
+
+
+// Function to join data based on common field
+function joinData_charge(data1, data2) {
+    const joinedData = [];
+    const map = new Map();
+    
+    // Store data from Database 2 in a map for quick lookup
+    data2.forEach(entry => {
+        map.set(entry.WorkUser_BarCode, entry);
+    });
+
+    // Perform the join operation
+    data1.forEach(entry => {
+        const matchingEntry = map.get(entry.barcode);
+        if (matchingEntry) {
+            const joinedEntry = {
+                ...entry,
+                ...matchingEntry
+            };
+            joinedData.push(joinedEntry);
+        }
+    });
+    return joinedData;
+}
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

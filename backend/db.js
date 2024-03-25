@@ -1,243 +1,280 @@
-const express = require('express');
-const mysql = require('mysql');
+const express = require("express");
+const mysql = require("mysql");
 const app = express();
+const bodyParser = require("body-parser");
 
-// Database 1 connection configuration
-const db1Config = {
-    connectionLimit: Infinity,
-    host: '10.35.10.78',
-    user: 'root',
-    password: '78mes@haier',
-    database: 'quality_control'
-};
-// Database 2 connection configuration
-const db2Config = {
-    connectionLimit: Infinity,
-    host: '10.35.10.77',
-    user: 'mes_it',
-    password: 'Haier@2022',
-    database: 'cosmo_im_9771'
-};
-
-
-// Create connections to both databases
-const db1_charge = mysql.createConnection(db1Config);
-const db1_cooling = mysql.createConnection(db1Config);
-const db1_compressor = mysql.createConnection(db1Config);
-const db2_9771 = mysql.createConnection(db2Config);
-
-// Connect to databases
-db1_charge.connect(err => {
-    if (err) {
-        console.error('Error connecting to 10.35.10.78 - oilcharger:', err);
-        return;
-    }
-    console.log('Connected to 10.35.10.78 - oilcharger');
+// Database connection configurations
+const db1Pool = mysql.createPool({
+  connectionLimit: 10,
+  host: "10.35.10.78",
+  user: "root",
+  password: "78mes@haier",
+  database: "quality_control",
+});
+const db2Pool = mysql.createPool({
+  connectionLimit: 10,
+  host: "10.35.10.77",
+  user: "mes_it",
+  password: "Haier@2022",
+  database: "cosmo_im_9771",
 });
 
-db1_cooling.connect(err => {
-    if (err) {
-        console.error('Error connecting to 10.35.10.78 - coolingtest:', err);
-        return;
-    }
-    console.log('Connected to 10.35.10.78 - coolingtest');
+//App use
+app.use(bodyParser.json());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  next();
+});
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "X-Requested-With,content-type"
+  );
+  next();
+});
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  next();
 });
 
-db1_compressor.connect(err => {
+//Insert compressor
+app.post("/Saved", (req, res) => {
+  const { materialBarcode, compressorBarcode, scanTime } = req.body;
+
+  const sql =
+    "INSERT INTO compressor (material_barcode, compressor_barcode, scan_time) VALUES (?, ?, ?)";
+  const values = [materialBarcode, compressorBarcode, scanTime];
+
+  db1Pool.query(sql, values, (err, result) => {
     if (err) {
-        console.error('Error connecting to 10.35.10.78 - compressor:', err);
-        return;
+      console.error("Error saving data to database:", err);
+      res.status(500).send("Internal Server Error");
+      return;
     }
-    console.log('Connected to 10.35.10.78 - compressor');
+    console.log("Data saved to compressor table:", result);
+    res.status(200).send("Data saved successfully");
+  });
 });
 
-db2_9771.connect(err => {
-    if (err) {
-        console.error('Error connecting to 10.35.10.77 - MES9771:', err);
-        return;
+// Define the route for /History
+app.get("/History", (req, res) => {
+  // Execute the SQL query to fetch data from the database
+  db1Pool.query(
+    "SELECT material_barcode, compressor_barcode, scan_time FROM compressor WHERE DATE(scan_time) = CURDATE() ORDER BY ID DESC;",
+    (error, results) => {
+      if (error) {
+        console.error("Error executing SQL query:", error);
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        // Send the fetched data as a JSON response
+        res.json(results);
+      }
     }
-    console.log('Connected to 10.35.10.77 - MES9771');
+  );
 });
 
-
-// API endpoint to join data from both databases
-app.get('/oilcharger', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-    // Query data from Database 1
-    const query1 = 'SELECT model, barcode, datetime, program, r600_setpoint, r600_actum, status, alarm FROM oilcharger';
-    db1_charge.query(query1, (err1, result1) => {
-        if (err1) {
-            console.error('Error querying data from Database - oilcharger:', err1);
-            res.status(500).send('Error querying data from Database - oilcharger');
-            return;
+//Report
+app.get("/oilcharger", async (req, res) => {
+  const { startDate, endDate, row } = req.query;
+  let query1;
+  if (row === "All") {
+    query1 = `SELECT model, barcode, datetime, program, r600_setpoint, r600_actum, status, alarm FROM oilcharger WHERE datetime BETWEEN '${startDate}' AND '${endDate}'`;
+  } else {
+    query1 = `SELECT model, barcode, datetime, program, r600_setpoint, r600_actum, status, alarm FROM oilcharger WHERE datetime BETWEEN '${startDate}' AND '${endDate}' LIMIT ${row}`;
+  }
+  const query2 =
+    "SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation";
+  try {
+    const [result1, result2] = await Promise.all([
+      executeQuery(db1Pool, query1),
+      executeQuery(db2Pool, query2),
+    ]);
+    const joinedData = joinData_charge(result1, result2);
+    res.json(joinedData);
+  } catch (error) {
+    res.status(500).send(`Error: ${error.message}`);
+  }
+});
+function executeQuery(pool, query) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      connection.query(query, (err, result) => {
+        connection.release();
+        if (err) {
+          reject(err);
+          return;
         }
-
-        // Query data from Database 2
-        const query2 = 'SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation';
-        db2_9771.query(query2, (err2, result2) => {
-            if (err2) {
-                console.error('Error querying data from Database - MES9771:', err2);
-                res.status(500).send('Error querying data from Database - MES9771');
-                return;
-            }
-
-            // Perform the join operation
-            const joinedData = joinData_charge(result1, result2);
-            res.json(joinedData);
-        });
+        resolve(result);
+      });
     });
-});
-
-app.get('/coolingtest', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-    // Query data from Database 1
-    const query1 = 'SELECT model, barcode, StartTime, Remark FROM cooling_test';
-    db1_cooling.query(query1, (err1, result1) => {
-        if (err1) {
-            console.error('Error querying data from Database - coolingtest:', err1);
-            res.status(500).send('Error querying data from Database - coolingtest');
-            return;
-        }
-
-        // Query data from Database 2
-        const query2 = 'SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation';
-        db2_9771.query(query2, (err2, result2) => {
-            if (err2) {
-                console.error('Error querying data from Database - MES9771:', err2);
-                res.status(500).send('Error querying data from Database - MES9771');
-                return;
-            }
-
-            // Perform the join operation
-            const joinedData = joinData_cooling(result1, result2);
-            res.json(joinedData);
-        });
-    });
-});
-
-app.get('/compressor', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-
-    // Query data from Database 1
-    const query1 = 'SELECT * FROM compressor';
-    db1_cooling.query(query1, (err1, result1) => {
-        if (err1) {
-            console.error('Error querying data from Database - compressor:', err1);
-            res.status(500).send('Error querying data from Database - compressor');
-            return;
-        }
-
-        // Query data from Database 2
-        const query2 = 'SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation';
-        db2_9771.query(query2, (err2, result2) => {
-            if (err2) {
-                console.error('Error querying data from Database - MES9771:', err2);
-                res.status(500).send('Error querying data from Database - MES9771');
-                return;
-            }
-
-            // Query data from Database 1 again
-            const query3 = 'SELECT model FROM oilcharger';
-            db1_charge.query(query3, (err3, result3) => {
-                if (err3) {
-                    console.error('Error querying data from Database - oilcharger:', err3);
-                    res.status(500).send('Error querying data from Database - oilcharger');
-                    return;
-                }
-
-                // Perform the join operation
-                const joinedData = joinData_compressor(result1, result2, result3);
-                res.json(joinedData);
-            });
-        });
-    });
-});
-
-
-// Function to join data based on common field (barcode = WorkUser_BarCode)
+  });
+}
 function joinData_charge(data1, data2) {
-    const joinedData = [];
-    const map = new Map();
-    
-    // Store data from Database 2 in a map for quick lookup
-    data2.forEach(entry => {
-        map.set(entry.WorkUser_BarCode, entry);
-    });
-
-    // Perform the join operation
-    data1.forEach(entry => {
-        const matchingEntry = map.get(entry.barcode);
-        if (matchingEntry) {
-            const joinedEntry = {
-                ...entry,
-                ...matchingEntry
-            };
-            joinedData.push(joinedEntry);
-        }
-    });
-    return joinedData;
+  const joinedData = [];
+  const map = new Map();
+  data2.forEach((entry) => {
+    map.set(entry.WorkUser_BarCode, entry);
+  });
+  data1.forEach((entry) => {
+    const matchingEntry = map.get(entry.barcode);
+    if (matchingEntry) {
+      const joinedEntry = {
+        ...entry,
+        ...matchingEntry,
+      };
+      joinedData.push(joinedEntry);
+    }
+  });
+  return joinedData;
 }
 
+app.get("/coolingtest", async (req, res) => {
+  const { startDate, endDate, row } = req.query;
+  let query1;
+  if (row === "All") {
+    query1 = `SELECT model, barcode, StartTime, Remark FROM cooling_test WHERE StartTime BETWEEN '${startDate}' AND '${endDate}'`;
+  } else {
+    query1 = `SELECT model, barcode, StartTime, Remark FROM cooling_test WHERE StartTime BETWEEN '${startDate}' AND '${endDate}' LIMIT ${row}`;
+  }
+  const query2 =
+    "SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation";
+  try {
+    const [result1, result2] = await Promise.all([
+      executeQuery(db1Pool, query1),
+      executeQuery(db2Pool, query2),
+    ]);
+    const joinedData = joinData_cooling(result1, result2);
+    res.json(joinedData);
+  } catch (error) {
+    res.status(500).send(`Error: ${error.message}`);
+  }
+});
+function executeQuery(pool, query) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      connection.query(query, (err, result) => {
+        connection.release();
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
+    });
+  });
+}
 function joinData_cooling(data1, data2) {
-    const joinedData = [];
-    const map = new Map();
-    
-    // Store data from Database 2 in a map for quick lookup
-    data2.forEach(entry => {
-        map.set(entry.WorkUser_BarCode, entry);
-    });
-
-    // Perform the join operation
-    data1.forEach(entry => {
-        const matchingEntry = map.get(entry.barcode);
-        if (matchingEntry) {
-            const joinedEntry = {
-                ...entry,
-                ...matchingEntry
-            };
-            joinedData.push(joinedEntry);
-        }
-    });
-    return joinedData;
+  const joinedData = [];
+  const map = new Map();
+  data2.forEach((entry) => {
+    map.set(entry.WorkUser_BarCode, entry);
+  });
+  data1.forEach((entry) => {
+    const matchingEntry = map.get(entry.barcode);
+    if (matchingEntry) {
+      const joinedEntry = {
+        ...entry,
+        ...matchingEntry,
+      };
+      joinedData.push(joinedEntry);
+    }
+  });
+  return joinedData;
 }
 
+app.get("/compressor", (req, res) => {
+  const { startDate, endDate, row } = req.query;
+  let query1;
+  if (row === "All") {
+    query1 = `SELECT material_barcode, compressor_barcode, scan_time FROM compressor WHERE scan_time BETWEEN '${startDate}' AND '${endDate}'`;
+  } else {
+    query1 = `SELECT material_barcode, compressor_barcode, scan_time FROM compressor WHERE scan_time BETWEEN '${startDate}' AND '${endDate}' LIMIT ${row}`;
+  }
+  const query2 =
+    "SELECT WorkUser_MOrderCode, WorkUser_BarCode, WorkUser_LineName FROM bns_pm_operation";
+  const query3 = "SELECT model, barcode FROM oilcharger";
+  db1Pool.getConnection((err, connection) => {
+    if (err)
+      return res.status(500).send(`Error connecting to Database: ${err}`);
+    connection.query(query1, (err1, result1) => {
+      connection.release();
+      if (err1)
+        return res
+          .status(500)
+          .send(`Error querying data from Database: ${err1}`);
+      db2Pool.getConnection((err, connection) => {
+        if (err)
+          return res.status(500).send(`Error connecting to Database: ${err}`);
+        connection.query(query2, (err2, result2) => {
+          connection.release();
+          if (err2)
+            return res
+              .status(500)
+              .send(`Error querying data from Database: ${err2}`);
+          db1Pool.getConnection((err, connection) => {
+            if (err)
+              return res
+                .status(500)
+                .send(`Error connecting to Database: ${err}`);
+            connection.query(query3, (err3, result3) => {
+              connection.release();
+              if (err3)
+                return res
+                  .status(500)
+                  .send(`Error querying data from Database: ${err3}`);
+              const joinedData = joinData_compressor(result1, result2, result3);
+              res.json(joinedData);
+            });
+          });
+        });
+      });
+    });
+  });
+});
 function joinData_compressor(data1, data2, data3) {
-    const joinedData = [];
-    const map = new Map();
-    
-    // Store data from Database 2 in a map for quick lookup
-    data2.forEach(entry => {
-        map.set(entry.WorkUser_BarCode, entry);
-    });
-
-    data3.forEach(entry2 => {
-        map.set(entry2.barcode, entry2);
-    });
-
-    // Perform the join operation
-    data1.forEach(entry => {
-        const matchingEntry = map.get(entry.material_barcode);
-        if (matchingEntry) {
-            const joinedEntry = {
-                ...entry,
-                ...entry2,
-                ...matchingEntry
-            };
-            joinedData.push(joinedEntry);
-        }
-    });
-    return joinedData;
+  const joinedData = [];
+  const map1 = new Map(data1.map((entry) => [entry.compressor_barcode, entry]));
+  const map3 = new Map(data3.map((entry) => [entry.barcode, entry]));
+  data2.forEach((entry2) => {
+    const matchingEntry1 = map1.get(entry2.WorkUser_BarCode);
+    const matchingEntry3 = map3.get(entry2.WorkUser_BarCode);
+    if (matchingEntry1 && matchingEntry3) {
+      const joinedEntry = {
+        ...entry2,
+        ...matchingEntry1,
+        ...matchingEntry3,
+      };
+      joinedData.push(joinedEntry);
+    }
+  });
+  return joinedData;
 }
-
 
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
