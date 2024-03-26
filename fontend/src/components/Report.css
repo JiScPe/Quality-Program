@@ -1,0 +1,36 @@
+.pagination-container {
+    margin-top: 20px;
+  }
+  
+  .pagination {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .page-item {
+    margin: 0 5px;
+    cursor: pointer;
+  }
+  
+  .page-link {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+  }
+  
+  .page-item.disabled .page-link {
+    cursor: not-allowed;
+    color: #ccc;
+  }
+  
+  .page-item.active .page-link {
+    background-color: #007bff;
+    color: #fff;
+  }
+  
+  .ellipsis {
+    font-weight: bold;
+  }
+  

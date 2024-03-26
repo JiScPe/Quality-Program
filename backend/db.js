@@ -13,13 +13,14 @@ const db1Pool = mysql.createPool({
   password: "78mes@haier",
   database: "quality_control",
 });
-const db2Pool = mysql.createPool({
-  connectionLimit: 10,
-  host: "10.35.10.77",
-  user: "mes_it",
-  password: "Haier@2022",
-  database: "cosmo_im_9771",
-});
+// const db2Pool = mysql.createPool({
+//   connectionLimit: 10,
+//   host: "10.35.10.77",
+//   user: "mes_it",
+//   password: "Haier@2022",
+//   database: "cosmo_im_9771",
+// });
+// ------------------------------------------------------------------------
 //App use
 app.use(bodyParser.json());
 app.use((req, res, next) => {
@@ -70,9 +71,7 @@ app.post("/Saved", (req, res) => {
   });
 });
 // ------------------------------------------------------------------------
-// Define the route for /History
 app.get("/History", (req, res) => {
-  // Execute the SQL query to fetch data from the database
   db1Pool.query(
     "SELECT material_barcode, compressor_barcode, scan_time FROM compressor WHERE DATE(scan_time) = CURDATE() ORDER BY ID DESC;",
     (error, results) => {
