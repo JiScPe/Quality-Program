@@ -6,6 +6,7 @@ const oilChargerRoute = require("./routes/oilcharger");
 const coolingTestRoute = require("./routes/coolingtest");
 const compressorRoute = require("./routes/compressor");
 const finalRoute = require("./routes/final");
+// require('dotenv').config()
 // ------------------------------------------------------------------------
 const db1Pool = mysql.createPool({
   connectionLimit: 10,

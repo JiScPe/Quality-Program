@@ -30,7 +30,7 @@ function Charge() {
       setStartDate(tempStartDate);
       setEndDate(tempEndDate);
       axios
-        .get(`http://localhost:3000/oilcharger?startDate=${tempStartDate}&endDate=${tempEndDate}`)
+        .get(`http://10.35.102.246:3000/oilcharger?startDate=${tempStartDate}&endDate=${tempEndDate}`)
         .then((res) => {
           setData(res.data);
           setTotalPages(row === -1 ? 1 : Math.ceil(res.data.length / row));

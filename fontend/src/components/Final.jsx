@@ -31,7 +31,7 @@ function Final() {
       setEndDate(tempEndDate);
       axios
         .get(
-          `http://localhost:3000/final?startDate=${tempStartDate}&endDate=${tempEndDate}`
+          `http://10.35.102.246:3000/final?startDate=${tempStartDate}&endDate=${tempEndDate}`
         )
         .then((res) => {
           setData(res.data);
