@@ -7,7 +7,7 @@ import Navbar from "./Navbar";
 import { format } from "date-fns";
 import "./Report.css";
 
-function Cooling() {
+function Final() {
   const [data, setData] = useState([]);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,10 +31,11 @@ function Cooling() {
       setEndDate(tempEndDate);
       axios
         .get(
-          `http://localhost:3000/coolingtest?startDate=${tempStartDate}&endDate=${tempEndDate}`
+          `http://localhost:3000/final?startDate=${tempStartDate}&endDate=${tempEndDate}`
         )
         .then((res) => {
           setData(res.data);
+          console.log(res.data)
           setTotalPages(row === -1 ? 1 : Math.ceil(res.data.length / row));
           setCurrentPage(1);
           setLoading(false); // Set loading to false after data is fetched
@@ -68,22 +69,22 @@ function Cooling() {
       let matchesOrderNo = true;
 
       if (lineFilter !== "") {
-        matchesLine = record.WorkUser_LineName.toLowerCase().includes(
+        matchesLine = record.PdCode.toLowerCase().includes(
           lineFilter.toLowerCase()
         );
       }
       if (modelFilter !== "") {
-        matchesModel = record.model
+        matchesModel = record.Model
           .toLowerCase()
           .includes(modelFilter.toLowerCase());
       }
       if (barcodeFilter !== "") {
-        matchesBarcode = record.barcode
+        matchesBarcode = record.BarCode
           .toLowerCase()
           .includes(barcodeFilter.toLowerCase());
       }
       if (orderNoFilter !== "") {
-        matchesOrderNo = record.WorkUser_MOrderCode.toLowerCase().includes(
+        matchesOrderNo = record.Order.toLowerCase().includes(
           orderNoFilter.toLowerCase()
         );
       }
@@ -102,7 +103,7 @@ function Cooling() {
 
     setRecords(filteredRecords.slice(startIndex, endIndex));
   };
-
+  
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -132,23 +133,23 @@ function Cooling() {
 
   const adjustedRecords = records.map((record) => ({
     ...record,
-    StartTime: format(new Date(record.StartTime), "yyyy-MM-dd HH:mm:ss"),
+    ScanTime: format(new Date(record.ScanTime), "yyyy-MM-dd HH:mm:ss"),
   }));
 
   const headers = [
-    { label: "Production Line", key: "WorkUser_LineName" },
-    { label: "Model", key: "model" },
-    { label: "Order No.", key: "WorkUser_MOrderCode" },
-    { label: "Barcode", key: "barcode" },
-    { label: "Date/Time", key: "StartTime" },
-    { label: "Remark", key: "Remark" },
+    { label: "Production Line", key: "PdCode" },
+    { label: "Model", key: "Model" },
+    { label: "Order No.", key: "Order" },
+    { label: "Barcode", key: "Barcode" },
+    { label: "Date/Time", key: "ScanTime" },
+    { label: "Status", key: "QcState" },
   ];
 
   return (
     <div>
       <Navbar />
       <h2 className="text-center">
-        <b>Cooling Test</b>
+        <b>Final appearance inspection</b>
       </h2>
       <br />
       <div className="App container">
@@ -202,7 +203,7 @@ function Cooling() {
           <CSVLink
             data={adjustedRecords}
             headers={headers}
-            filename={"coolingtest.csv"}
+            filename={"final.csv"}
           >
             <div
               style={{
@@ -268,21 +269,21 @@ function Cooling() {
                   </th>
                   <th>Date/Time</th>
                   <th>
-                    <center>Remark</center>
+                    <center>Status</center>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((d, i) => (
                   <tr key={i}>
-                    <td>{d.WorkUser_LineName}</td>
-                    <td>{d.model}</td>
-                    <td>{d.WorkUser_MOrderCode}</td>
-                    <td>{d.barcode}</td>
+                    <td>{d.PdCode}</td>
+                    <td>{d.Model}</td>
+                    <td>{d.Order}</td>
+                    <td>{d.Barcode}</td>
                     <td>
-                      {format(new Date(d.StartTime), "yyyy-MM-dd HH:mm:ss")}
+                      {format(new Date(d.ScanTime), "yyyy-MM-dd HH:mm:ss")}
                     </td>
-                    <td>{d.Remark}</td>
+                    <td>{d.QcState}</td>
                   </tr>
                 ))}
               </tbody>
@@ -367,4 +368,4 @@ function Cooling() {
   );
 }
 
-export default Cooling;
+export default Final;

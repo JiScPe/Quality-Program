@@ -47,6 +47,11 @@ function History() {
       key: "scan_time",
       render: (text) => format(new Date(text), 'yyyy-MM-dd HH:mm:ss')
     },
+    {
+      title: "Scan By",
+      dataIndex: "user_id",
+      key: "user_id",
+    }
   ];
 
   return (

@@ -7,6 +7,7 @@ import History from "./History";
 function FormScan() {
   const [materialBarcode, setMaterialBarcode] = useState("");
   const [compressorBarcode, setCompressorBarcode] = useState("");
+  const [userId, setUserId] = useState(""); // State for user ID
   const [scanTime] = useState(formatScanTime(new Date())); // Scan time cannot be edited
   const materialInputRef = useRef(null); // Reference for material barcode input field
   const compressorInputRef = useRef(null);
@@ -30,6 +31,7 @@ function FormScan() {
         materialBarcode: materialBarcode,
         compressorBarcode: compressorBarcode,
         scanTime: scanTime,
+        userId: userId, // Include user ID in the data
       };
       await axios.post("http://localhost:3000/Saved", data);
       console.log("Data sent successfully!");
@@ -85,6 +87,8 @@ function FormScan() {
           type="text"
           placeholder="User ID"
           className="user-id-input"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)} // Handle changes in the user ID input field
           onKeyPress={handleUserIdKeyPress} // Listen for Enter key press
         />
       </div>

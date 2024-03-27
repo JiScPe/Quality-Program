@@ -21,7 +21,6 @@ function Navbar() {
             <a href="/safety-test-report">Safety Test</a>
             <a href="/final-appearance-inspection-report">Final Appearance Inspection</a>
           </div>
-          
         </li>
       </ul>
     </nav>

@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 const oilChargerRoute = require("./routes/oilcharger");
 const coolingTestRoute = require("./routes/coolingtest");
 const compressorRoute = require("./routes/compressor");
+const finalRoute = require("./routes/final");
 // ------------------------------------------------------------------------
 const db1Pool = mysql.createPool({
   connectionLimit: 10,
@@ -56,10 +57,10 @@ app.use((req, res, next) => {
 // ------------------------------------------------------------------------
 //Insert compressor
 app.post("/Saved", (req, res) => {
-  const { materialBarcode, compressorBarcode, scanTime } = req.body;
+  const { materialBarcode, compressorBarcode, scanTime, userId } = req.body;
   const sql =
-    "INSERT INTO compressor (material_barcode, compressor_barcode, scan_time) VALUES (?, ?, ?)";
-  const values = [materialBarcode, compressorBarcode, scanTime];
+    "INSERT INTO compressor (material_barcode, compressor_barcode, scan_time, user_id) VALUES (?, ?, ?, ?)";
+  const values = [materialBarcode, compressorBarcode, scanTime, userId];
   db1Pool.query(sql, values, (err, result) => {
     if (err) {
       console.error("Error saving data to database:", err);
@@ -73,7 +74,7 @@ app.post("/Saved", (req, res) => {
 // ------------------------------------------------------------------------
 app.get("/History", (req, res) => {
   db1Pool.query(
-    "SELECT material_barcode, compressor_barcode, scan_time FROM compressor WHERE DATE(scan_time) = CURDATE() ORDER BY ID DESC;",
+    "SELECT material_barcode, compressor_barcode, scan_time, user_id FROM compressor WHERE DATE(scan_time) = CURDATE() ORDER BY ID DESC;",
     (error, results) => {
       if (error) {
         console.error("Error executing SQL query:", error);
@@ -89,6 +90,7 @@ app.get("/History", (req, res) => {
 app.use('/oilcharger', oilChargerRoute);
 app.use('/coolingtest', coolingTestRoute);
 app.use('/compressor', compressorRoute);
+app.use('/final', finalRoute);
 // ------------------------------------------------------------------------
 // Start the server
 const PORT = process.env.PORT || 3000;

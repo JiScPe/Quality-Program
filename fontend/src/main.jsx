@@ -7,6 +7,7 @@ import Navbar from './components/Navbar.jsx'
 import Cooling from './components/CoolingTest.jsx'
 import Compressor from './components/Compressor.jsx'
 import FormScan from './components/FormScan.jsx'
+import Final from './components/Final.jsx'
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
   {
     path: '/scan-compressor-report',
     element: <Compressor />
+  },
+  {
+    path: '/final-appearance-inspection-report',
+    element: <Final />
   }
 ])
 
