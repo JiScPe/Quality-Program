@@ -50,7 +50,7 @@ function Compressor() {
 
   useEffect(() => {
     filterRecords();
-  }, [lineFilter, modelFilter, matbarcodeFilter, orderNoFilter, currentPage, row, data]);
+  }, [lineFilter, modelFilter, matbarcodeFilter, compbarcodeFilter, orderNoFilter, currentPage, row, data]);
 
   const filterRecords = () => {
     let filteredRecords = data.filter((record) => {
@@ -71,7 +71,7 @@ function Compressor() {
           .includes(modelFilter.toLowerCase());
       }
       if (matbarcodeFilter !== "") {
-        matchesBarcode = record.material_barcode
+        matchesMatBarcode = record.material_barcode
           .toLowerCase()
           .includes(matbarcodeFilter.toLowerCase());
       }
@@ -256,7 +256,7 @@ function Compressor() {
                     <input
                       type="text"
                       className="form-control input-sm"
-                      placeholder="Search Comp Barcode"
+                      placeholder="Search Comp. Barcode"
                       value={compbarcodeFilter}
                       onChange={(e) => setCompBarcodeFilter(e.target.value)}
                     />

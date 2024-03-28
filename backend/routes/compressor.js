@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
       const [mes_results, mes_fields] = await mes_connection.query(query2)
       const query3 = "SELECT model, barcode FROM oilcharger";
       const [results2, fields2] = await connection.query(query3)
-      console.log(results2)
+      // console.log(results2)
       const joinedData = joinData_compressor(results, mes_results, results2)
       res.json(joinedData)
     } catch (error) {

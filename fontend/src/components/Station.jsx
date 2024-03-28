@@ -36,5 +36,5 @@ const Station = () => {
     </div>
   );
 };
-
+// console.log(barcode)
 export default Station;

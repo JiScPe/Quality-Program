@@ -79,7 +79,7 @@ function Final() {
           .includes(modelFilter.toLowerCase());
       }
       if (barcodeFilter !== "") {
-        matchesBarcode = record.BarCode
+        matchesBarcode = record.Barcode
           .toLowerCase()
           .includes(barcodeFilter.toLowerCase());
       }

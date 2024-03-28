@@ -40,8 +40,8 @@ router.get("/", async (req, res) => {
       ORDER BY x.Create_Date DESC;
     `;
     const [result, field] = await mes_connection.query(query);
-    console.log(result)
-    console.log(field)
+    // console.log(result)
+    // console.log(field)
     res.json(result);
   } catch (error) {
     console.error("Error executing query:", error);
