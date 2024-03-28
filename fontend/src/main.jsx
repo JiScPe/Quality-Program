@@ -8,6 +8,8 @@ import Cooling from './components/CoolingTest.jsx'
 import Compressor from './components/Compressor.jsx'
 import FormScan from './components/FormScan.jsx'
 import Final from './components/Final.jsx'
+import Safety from './components/Safety.jsx'
+import Station from './components/Station.jsx'
 
 const router = createBrowserRouter([
   {
@@ -29,6 +31,14 @@ const router = createBrowserRouter([
   {
     path: '/final-appearance-inspection-report',
     element: <Final />
+  },
+  // {
+  //   path: '/safety-test-report',
+  //   element: <Safety />
+  // },
+  {
+    path: '/station',
+    element: <Station />
   }
 ])
 

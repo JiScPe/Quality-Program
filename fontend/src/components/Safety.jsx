@@ -4,17 +4,16 @@ import { CSVLink } from "react-csv";
 import ReactLoading from "react-loading";
 import { FaFileExcel } from "react-icons/fa";
 import Navbar from "./Navbar";
-import { format } from 'date-fns';
+import { format } from "date-fns";
 import "./Report.css";
 
-function Compressor() {
+function Safety() {
   const [data, setData] = useState([]);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [modelFilter, setModelFilter] = useState("");
-  const [matbarcodeFilter, setMatBarcodeFilter] = useState("");
-  const [compbarcodeFilter, setCompBarcodeFilter] = useState("");
+  const [barcodeFilter, setBarcodeFilter] = useState("");
   const [orderNoFilter, setOrderNoFilter] = useState("");
   const [lineFilter, setLineFilter] = useState("");
   const [startdate, setStartDate] = useState("");
@@ -31,70 +30,69 @@ function Compressor() {
       setStartDate(tempStartDate);
       setEndDate(tempEndDate);
       axios
-        .get(`http://localhost:3000/compressor?startDate=${tempStartDate}&endDate=${tempEndDate}`)
+        .get(
+          `http://10.35.102.246:3000/safety?startDate=${tempStartDate}&endDate=${tempEndDate}`
+        )
         .then((res) => {
           setData(res.data);
+          console.log(res.data)
           setTotalPages(row === -1 ? 1 : Math.ceil(res.data.length / row));
           setCurrentPage(1);
           setLoading(false); // Set loading to false after data is fetched
           filterRecords(); // Call filterRecords after data is fetched
         })
         .catch((err) => {
-          setError(err.message);
+          alert("No data. Select new date.");
           setLoading(false); // Set loading to false in case of error
         });
     } else {
       alert("Please enter both start date and end date.");
     }
   };
-
   useEffect(() => {
     filterRecords();
-  }, [lineFilter, modelFilter, matbarcodeFilter, orderNoFilter, currentPage, row, data]);
+  }, [
+    lineFilter,
+    modelFilter,
+    barcodeFilter,
+    orderNoFilter,
+    currentPage,
+    row,
+    data,
+  ]);
 
   const filterRecords = () => {
     let filteredRecords = data.filter((record) => {
       let matchesLine = true;
       let matchesModel = true;
-      let matchesMatBarcode = true;
+      let matchesBarcode = true;
       let matchesOrderNo = true;
-      let matchesCompBarcode = true;
 
       if (lineFilter !== "") {
-        matchesLine = record.WorkUser_LineName.toLowerCase().includes(
+        matchesLine = record.PdCode.toLowerCase().includes(
           lineFilter.toLowerCase()
         );
       }
       if (modelFilter !== "") {
-        matchesModel = record.model
+        matchesModel = record.Model
           .toLowerCase()
           .includes(modelFilter.toLowerCase());
       }
-      if (matbarcodeFilter !== "") {
-        matchesBarcode = record.material_barcode
+      if (barcodeFilter !== "") {
+        matchesBarcode = record.BarCode
           .toLowerCase()
-          .includes(matbarcodeFilter.toLowerCase());
-      }
-      if (compbarcodeFilter !== "") {
-        matchesCompBarcode = record.compressor_barcode
-          .toLowerCase()
-          .includes(compbarcodeFilter.toLowerCase());
+          .includes(barcodeFilter.toLowerCase());
       }
       if (orderNoFilter !== "") {
-        matchesOrderNo = record.WorkUser_MOrderCode.toLowerCase().includes(
+        matchesOrderNo = record.Order.toLowerCase().includes(
           orderNoFilter.toLowerCase()
         );
       }
 
-      return (
-        matchesLine &&
-        matchesModel &&
-        matchesMatBarcode &&
-        matchesCompBarcode &&
-        matchesOrderNo
-      );
+      return matchesLine && matchesModel && matchesBarcode && matchesOrderNo;
     });
 
+    // Apply pagination or show all records if row is set to -1 (All)
     let startIndex = 0;
     let endIndex = filteredRecords.length;
 
@@ -105,7 +103,7 @@ function Compressor() {
 
     setRecords(filteredRecords.slice(startIndex, endIndex));
   };
-
+  
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -132,28 +130,29 @@ function Compressor() {
   if (error) {
     return <div className="loading-container">Error: {error}</div>;
   }
-  
-  const adjustedRecords = records.map(record => ({
+
+  const adjustedRecords = records.map((record) => ({
     ...record,
-    scan_time: format(new Date(record.scan_time), 'yyyy-MM-dd HH:mm:ss')
+    ScanTime: format(new Date(record.ScanTime), "yyyy-MM-dd HH:mm:ss"),
   }));
 
   const headers = [
-    { label: "Production Line", key: "WorkUser_LineName" },
-    { label: "Model", key: "model" },
-    { label: "Order No.", key: "WorkUser_MOrderCode" },
-    { label: "Barcode", key: "material_barcode" },
-    { label: "Compressor Barcode", key: "compressor_barcode" },
-    { label: "Date/Time", key: "scan_time" }
+    { label: "Production Line", key: "PdCode" },
+    { label: "Model", key: "Model" },
+    { label: "Order No.", key: "Order" },
+    { label: "Barcode", key: "Barcode" },
+    { label: "Date/Time", key: "ScanTime" }
   ];
 
   return (
     <div>
       <Navbar />
-      <h2 className="text-center"><b>Compressor</b></h2>
+      <h2 className="text-center">
+        <b>Safety test</b>
+      </h2>
       <br />
       <div className="App container">
-      <div style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{ marginRight: "auto" }}>
             <label style={{ marginRight: "10px" }}>Start Date:</label>
             <input
@@ -169,10 +168,18 @@ function Compressor() {
               value={tempEndDate}
               onChange={(e) => setTempEndDate(e.target.value)}
             />
-            <button onClick={handleSearch} className="btn btn-primary" style={{ marginLeft: "10px" }}>
+            <button
+              onClick={handleSearch}
+              className="btn btn-primary"
+              style={{ marginLeft: "10px" }}
+            >
               Search
             </button>
-            <button onClick={handleClear} className="btn btn-warning" style={{ marginLeft: "10px" }}>
+            <button
+              onClick={handleClear}
+              className="btn btn-warning"
+              style={{ marginLeft: "10px" }}
+            >
               Clear
             </button>
           </div>
@@ -192,10 +199,20 @@ function Compressor() {
           </div>
         </div>
         <div className="bg-white shadow border">
-          <CSVLink data={adjustedRecords} headers={headers} filename={"compressor.csv"}>
-            <div style={{ textAlign: "right", marginBottom: "10px", color: "green" }}>
+          <CSVLink
+            data={adjustedRecords}
+            headers={headers}
+            filename={"final.csv"}
+          >
+            <div
+              style={{
+                textAlign: "right",
+                marginBottom: "10px",
+                color: "green",
+              }}
+            >
               <FaFileExcel style={{ marginRight: "5px" }} /> Download
-            </div> 
+            </div>
           </CSVLink>
           <div className="table-responsive">
             <table className="table table-striped table-hover">
@@ -239,26 +256,14 @@ function Compressor() {
                   </th>
                   <th>
                     <center>
-                      <label>Material Barcode</label>
+                      <label>Barcode</label>
                     </center>
                     <input
                       type="text"
                       className="form-control input-sm"
-                      placeholder="Search Mat. Barcode"
-                      value={matbarcodeFilter}
-                      onChange={(e) => setMatBarcodeFilter(e.target.value)}
-                    />
-                  </th>
-                  <th>
-                    <center>
-                      <label>Compressor Barcode</label>
-                    </center>
-                    <input
-                      type="text"
-                      className="form-control input-sm"
-                      placeholder="Search Comp Barcode"
-                      value={compbarcodeFilter}
-                      onChange={(e) => setCompBarcodeFilter(e.target.value)}
+                      placeholder="Search Barcode"
+                      value={barcodeFilter}
+                      onChange={(e) => setBarcodeFilter(e.target.value)}
                     />
                   </th>
                   <th>Date/Time</th>
@@ -267,12 +272,14 @@ function Compressor() {
               <tbody>
                 {records.map((d, i) => (
                   <tr key={i}>
-                    <td>{d.WorkUser_LineName}</td>
-                    <td>{d.model}</td>
-                    <td>{d.WorkUser_MOrderCode}</td>
-                    <td>{d.material_barcode}</td>
-                    <td>{d.compressor_barcode}</td>
-                    <td>{format(new Date(d.scan_time), 'yyyy-MM-dd HH:mm:ss')}</td>
+                    <td>{d.PdCode}</td>
+                    <td>{d.Model}</td>
+                    <td>{d.Order}</td>
+                    <td>{d.Barcode}</td>
+                    <td>
+                      {format(new Date(d.ScanTime), "yyyy-MM-dd HH:mm:ss")}
+                    </td>
+                    <td>{d.QcState}</td>
                   </tr>
                 ))}
               </tbody>
@@ -357,4 +364,4 @@ function Compressor() {
   );
 }
 
-export default Compressor;
+export default Safety;
