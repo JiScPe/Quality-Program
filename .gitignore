@@ -2,3 +2,4 @@
 /package-lock.json
 /package.json
 backend/test
+backend/node_modules
